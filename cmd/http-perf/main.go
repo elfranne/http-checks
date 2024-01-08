@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptrace"
@@ -9,8 +11,7 @@ import (
 	"strings"
 	"time"
 
-	corev2 "github.com/sensu/sensu-go/api/core/v2"
-	"github.com/sensu/sensu-go/types"
+	corev2 "github.com/sensu/core/v2"
 	"github.com/sensu/sensu-plugin-sdk/sensu"
 )
 
@@ -27,6 +28,8 @@ type Config struct {
 	Headers              []string
 	MTLSKeyFile          string
 	MTLSCertFile         string
+	Method               string
+	Postdata             string
 }
 
 var (
@@ -41,8 +44,8 @@ var (
 		},
 	}
 
-	options = []*sensu.PluginConfigOption{
-		{
+	options = []sensu.ConfigOption{
+		&sensu.PluginConfigOption[string]{
 			Path:      "url",
 			Env:       "CHECK_URL",
 			Argument:  "url",
@@ -51,7 +54,7 @@ var (
 			Usage:     "URL to test",
 			Value:     &plugin.URL,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "insecure-skip-verify",
 			Env:       "",
 			Argument:  "insecure-skip-verify",
@@ -60,7 +63,7 @@ var (
 			Usage:     "Skip TLS certificate verification (not recommended!)",
 			Value:     &plugin.InsecureSkipVerify,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:      "trusted-ca-file",
 			Env:       "",
 			Argument:  "trusted-ca-file",
@@ -69,7 +72,7 @@ var (
 			Usage:     "TLS CA certificate bundle in PEM format",
 			Value:     &plugin.TrustedCAFile,
 		},
-		{
+		&sensu.PluginConfigOption[int]{
 			Path:      "timeout",
 			Env:       "",
 			Argument:  "timeout",
@@ -78,7 +81,7 @@ var (
 			Usage:     "Request timeout in seconds",
 			Value:     &plugin.Timeout,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:      "warning",
 			Env:       "",
 			Argument:  "warning",
@@ -87,7 +90,7 @@ var (
 			Usage:     "Warning threshold, can be expressed as seconds or milliseconds (1s = 1000ms)",
 			Value:     &plugin.Warning,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:      "critical",
 			Env:       "",
 			Argument:  "critical",
@@ -96,7 +99,7 @@ var (
 			Usage:     "Critical threshold, can be expressed as seconds or milliseconds (1s = 1000ms)",
 			Value:     &plugin.Critical,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "output-in-ms",
 			Env:       "",
 			Argument:  "output-in-ms",
@@ -105,7 +108,7 @@ var (
 			Usage:     "Provide output in milliseconds (default false, display in seconds)",
 			Value:     &plugin.OutputInMilliseconds,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "header",
 			Env:       "",
 			Argument:  "header",
@@ -114,7 +117,7 @@ var (
 			Usage:     "Additional header(s) to send in check request",
 			Value:     &plugin.Headers,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:      "mtls-key-file",
 			Env:       "",
 			Argument:  "mtls-key-file",
@@ -123,7 +126,7 @@ var (
 			Usage:     "Key file for mutual TLS auth in PEM format",
 			Value:     &plugin.MTLSKeyFile,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:      "mtls-cert-file",
 			Env:       "",
 			Argument:  "mtls-cert-file",
@@ -131,6 +134,22 @@ var (
 			Default:   "",
 			Usage:     "Certificate file for mutual TLS auth in PEM format",
 			Value:     &plugin.MTLSCertFile,
+		},
+		&sensu.PluginConfigOption[string]{
+			Path:      "method",
+			Argument:  "method",
+			Shorthand: "m",
+			Default:   "GET",
+			Usage:     "Specify http method",
+			Value:     &plugin.Method,
+		},
+		&sensu.PluginConfigOption[string]{
+			Path:      "postdata",
+			Argument:  "post-data",
+			Shorthand: "p",
+			Default:   "",
+			Usage:     "Data to sent via POST method",
+			Value:     &plugin.Postdata,
 		},
 	}
 )
@@ -140,7 +159,7 @@ func main() {
 	check.Execute()
 }
 
-func checkArgs(event *types.Event) (int, error) {
+func checkArgs(event *corev2.Event) (int, error) {
 	var err error
 
 	if len(plugin.URL) == 0 {
@@ -165,7 +184,7 @@ func checkArgs(event *types.Event) (int, error) {
 	if len(plugin.TrustedCAFile) > 0 {
 		caCertPool, err := corev2.LoadCACerts(plugin.TrustedCAFile)
 		if err != nil {
-			return sensu.CheckStateWarning, fmt.Errorf("Error loading specified CA file")
+			return sensu.CheckStateWarning, fmt.Errorf("error loading specified CA file")
 		}
 		tlsConfig.RootCAs = caCertPool
 	}
@@ -177,15 +196,17 @@ func checkArgs(event *types.Event) (int, error) {
 	if len(plugin.MTLSKeyFile) > 0 && len(plugin.MTLSCertFile) > 0 {
 		cert, err := tls.LoadX509KeyPair(plugin.MTLSCertFile, plugin.MTLSKeyFile)
 		if err != nil {
-			return sensu.CheckStateWarning, fmt.Errorf("Failed to load mTLS key pair %s/%s: %v", plugin.MTLSCertFile, plugin.MTLSKeyFile, err)
+			return sensu.CheckStateWarning, fmt.Errorf("failed to load mTLS key pair %s/%s: %v", plugin.MTLSCertFile, plugin.MTLSKeyFile, err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
-
+	if (plugin.Method == "GET" && len(plugin.Postdata) > 0) || plugin.Method == "POST" && len(plugin.Postdata) < 1 {
+		return sensu.CheckStateWarning, fmt.Errorf("malformed POST parameters")
+	}
 	return sensu.CheckStateOK, nil
 }
 
-func executeCheck(event *types.Event) (int, error) {
+func executeCheck(event *corev2.Event) (int, error) {
 
 	client := http.DefaultClient
 	client.Transport = http.DefaultTransport
@@ -200,10 +221,25 @@ func executeCheck(event *types.Event) (int, error) {
 		client.Transport.(*http.Transport).TLSClientConfig = &tlsConfig
 	}
 
-	req, err := http.NewRequest("GET", plugin.URL, nil)
-	if err != nil {
-		fmt.Printf("request creation error: %s\n", err)
-		return sensu.CheckStateCritical, nil
+	req := &http.Request{}
+	if plugin.Method == "POST" {
+		rawpost, _ := json.Marshal(plugin.Postdata)
+		if err != nil {
+			fmt.Printf("failed to parse Postdata: %s\n", err)
+			return sensu.CheckStateCritical, nil
+		}
+		postdata := bytes.NewBuffer(rawpost)
+		req, err = http.NewRequest(plugin.Method, plugin.URL, postdata)
+		if err != nil {
+			fmt.Printf("%s request creation error: %s\n", plugin.Method, err)
+			return sensu.CheckStateCritical, nil
+		}
+	} else {
+		req, err = http.NewRequest(plugin.Method, plugin.URL, nil)
+		if err != nil {
+			fmt.Printf("%s request creation error: %s\n", plugin.Method, err)
+			return sensu.CheckStateCritical, nil
+		}
 	}
 	if len(plugin.Headers) > 0 {
 		for _, header := range plugin.Headers {
