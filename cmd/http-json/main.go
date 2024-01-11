@@ -263,6 +263,12 @@ func executeCheck(event *corev2.Event) (int, error) {
 		return sensu.CheckStateCritical, nil
 	}
 
+	// will responds [] as empty response
+	if int(resp.ContentLength) == 2 {
+		fmt.Printf("empty response: %s\n", err)
+		return sensu.CheckStateCritical, nil
+	}
+
 	query, err := gojq.Parse(plugin.Query)
 	if err != nil {
 		fmt.Printf("Failed to parse query %q, error: %v", plugin.Query, err)
