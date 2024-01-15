@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
@@ -35,6 +36,7 @@ type Config struct {
 	MTLSCertFile       string
 	Method             string
 	Postdata           string
+	Debug              bool
 }
 
 var (
@@ -146,6 +148,13 @@ var (
 			Usage:     "Data to sent via POST method",
 			Value:     &plugin.Postdata,
 		},
+		&sensu.PluginConfigOption[bool]{
+			Path:     "Debug",
+			Argument: "debug",
+			Default:  false,
+			Usage:    "Debug",
+			Value:    &plugin.Debug,
+		},
 	}
 )
 
@@ -249,10 +258,20 @@ func executeCheck(event *corev2.Event) (int, error) {
 		}
 	}
 
+	if plugin.Debug {
+		dumpReq, _ := httputil.DumpRequest(req, true)
+		fmt.Printf("\bDEBUG-REQUEST:\n%s", string(dumpReq))
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("request error: %s\n", err)
 		return sensu.CheckStateCritical, nil
+	}
+
+	if plugin.Debug {
+		dumpResp, _ := httputil.DumpResponse(resp, true)
+		fmt.Printf("\nDEBUG-RESPONSE:\n%s", string(dumpResp))
 	}
 
 	defer resp.Body.Close()
