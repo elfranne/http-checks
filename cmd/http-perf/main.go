@@ -30,6 +30,8 @@ type Config struct {
 	MTLSCertFile         string
 	Method               string
 	Postdata             string
+	Schema               string
+	Libcurl              bool
 }
 
 var (
@@ -138,7 +140,7 @@ var (
 		&sensu.PluginConfigOption[string]{
 			Path:      "method",
 			Argument:  "method",
-			Shorthand: "m",
+			Shorthand: "",
 			Default:   "GET",
 			Usage:     "Specify http method",
 			Value:     &plugin.Method,
@@ -150,6 +152,22 @@ var (
 			Default:   "",
 			Usage:     "Data to sent via POST method",
 			Value:     &plugin.Postdata,
+		},
+		&sensu.PluginConfigOption[string]{
+			Path:      "schema",
+			Argument:  "schema",
+			Shorthand: "s",
+			Default:   "",
+			Usage:     "Schema to prepend perf data",
+			Value:     &plugin.Schema,
+		},
+		&sensu.PluginConfigOption[bool]{
+			Path:      "libcurl",
+			Argument:  "libcurl",
+			Shorthand: "l",
+			Default:   false,
+			Usage:     "Use libcurl names",
+			Value:     &plugin.Libcurl,
 		},
 	}
 )
@@ -300,12 +318,43 @@ func executeCheck(event *corev2.Event) (int, error) {
 
 	defer resp.Body.Close()
 
+	// make a map to translate into Libcurl names
+	perfnames := map[bool]map[string]string{
+		false: {
+			"connect_duration":       "connect_duration",
+			"dns_duration":           "dns_duration",
+			"first_byte_duration":    "first_byte_duration",
+			"tls_handshake_duration": "tls_handshake_duration",
+			"total_request_duration": "total_request_duration",
+			"status_code":            "status_code",
+		},
+		true: {
+			"connect_duration":       "time_connect",
+			"dns_duration":           "time_namelookup",
+			"first_byte_duration":    "time_starttransfer",
+			"tls_handshake_duration": "time_pretransfer",
+			"total_request_duration": "time_total",
+			"status_code":            "http_code",
+		},
+	}
+
 	if plugin.OutputInMilliseconds {
 		output = fmt.Sprintf("%dms", totalRequestDuration.Milliseconds())
-		perfdata = fmt.Sprintf("dns_duration=%d, tls_handshake_duration=%d, connect_duration=%d, first_byte_duration=%d, total_request_duration=%d", dnsDuration.Milliseconds(), tlsHandshakeDuration.Milliseconds(), connectDuration.Milliseconds(), firstByteDuration.Milliseconds(), totalRequestDuration.Milliseconds())
+		perfdata += fmt.Sprintf("%s%s=%d, ", plugin.Schema, perfnames[plugin.Libcurl]["status_code"], resp.StatusCode)
+		perfdata += fmt.Sprintf("%s%s=%d, ", plugin.Schema, perfnames[plugin.Libcurl]["dns_duration"], dnsDuration.Milliseconds())
+		perfdata += fmt.Sprintf("%s%s=%d, ", plugin.Schema, perfnames[plugin.Libcurl]["tls_handshake_duration"], tlsHandshakeDuration.Milliseconds())
+		perfdata += fmt.Sprintf("%s%s=%d, ", plugin.Schema, perfnames[plugin.Libcurl]["connect_duration"], connectDuration.Milliseconds())
+		perfdata += fmt.Sprintf("%s%s=%d, ", plugin.Schema, perfnames[plugin.Libcurl]["first_byte_duration"], firstByteDuration.Milliseconds())
+		perfdata += fmt.Sprintf("%s%s=%d", plugin.Schema, perfnames[plugin.Libcurl]["total_request_duration"], totalRequestDuration.Milliseconds())
+
 	} else {
 		output = fmt.Sprintf("%0.6fs", totalRequestDuration.Seconds())
-		perfdata = fmt.Sprintf("dns_duration=%0.6f, tls_handshake_duration=%0.6f, connect_duration=%0.6f, first_byte_duration=%0.6f, total_request_duration=%0.6f", dnsDuration.Seconds(), tlsHandshakeDuration.Seconds(), connectDuration.Seconds(), firstByteDuration.Seconds(), totalRequestDuration.Seconds())
+		perfdata += fmt.Sprintf("%s%s=%d, ", plugin.Schema, perfnames[plugin.Libcurl]["status_code"], resp.StatusCode)
+		perfdata += fmt.Sprintf("%s%s=%0.6f, ", plugin.Schema, perfnames[plugin.Libcurl]["dns_duration"], dnsDuration.Seconds())
+		perfdata += fmt.Sprintf("%s%s=%0.6f, ", plugin.Schema, perfnames[plugin.Libcurl]["tls_handshake_duration"], tlsHandshakeDuration.Seconds())
+		perfdata += fmt.Sprintf("%s%s=%0.6f, ", plugin.Schema, perfnames[plugin.Libcurl]["connect_duration"], connectDuration.Seconds())
+		perfdata += fmt.Sprintf("%s%s=%0.6f, ", plugin.Schema, perfnames[plugin.Libcurl]["first_byte_duration"], firstByteDuration.Seconds())
+		perfdata += fmt.Sprintf("%s%s=%0.6f", plugin.Schema, perfnames[plugin.Libcurl]["total_request_duration"], totalRequestDuration.Seconds())
 	}
 	if totalRequestDuration > critical {
 		fmt.Printf("http-perf CRITICAL: %s | %s\n", output, perfdata)
