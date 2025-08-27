@@ -5,6 +5,7 @@
 # http-checks
 
 ## Table of Contents
+
 - [Overview](#overview)
   - [Attribution](#attribution)
   - [Checks](#checks)
@@ -15,7 +16,6 @@
   - [http-get](#http-get)
 - [Configuration](#configuration)
   - [Asset registration](#asset-registration)
-  - [Check definitions](#check-definition)
 - [Installation from source](#installation-from-source)
 - [Contributing](#contributing)
 
@@ -34,12 +34,12 @@ checks.
 
 This collection contains the following checks:
 
-* `http-check` - for checking HTTP status or searching for a string in the
+- `http-check` - for checking HTTP status or searching for a string in the
 response body
-* `http-perf` - for checking HTTP performance by measuring response times,
+- `http-perf` - for checking HTTP performance by measuring response times,
 provides metrics in nagios_perfdata format
-* `http-json` - for querying JSON output from an HTTP request
-* `http-get` - for fetching metrics from HTTP sources
+- `http-json` - for querying JSON output from an HTTP request
+- `http-get` - for fetching metrics from HTTP sources
 
 ## Usage examples
 
@@ -47,7 +47,7 @@ provides metrics in nagios_perfdata format
 
 #### Help output
 
-```
+```none
 HTTP Status/String Check
 
 Usage:
@@ -75,7 +75,7 @@ Use "http-check [command] --help" for more information about a command.
 
 #### Example(s)
 
-```
+```sh
 http-check --url https://sensu.io --search-string Monitoring
 http-check OK: found "Monitoring" at https://sensu.io
 
@@ -100,16 +100,16 @@ http-check OK: HTTP Status 200 for http://localhost:8000/health
 
 #### Note(s)
 
-* When using `--redirect-ok` it affects both the string search and status checkfunctionality.
-  - For a string search, if true, it searches for the string in the eventual destination. 
+- When using `--redirect-ok` it affects both the string search and status checkfunctionality.
+  - For a string search, if true, it searches for the string in the eventual destination.
   - For a status check, if false, receiving a redirect will return a `warning` status.  If true, it will return an `ok` status.
-* Headers should be in the form of "Header-Name: Header value".
+- Headers should be in the form of "Header-Name: Header value".
 
 ### http-perf
 
 #### Help output
 
-```
+```none
 HTTP Performance Check
 
 Usage:
@@ -138,7 +138,7 @@ Use "http-perf [command] --help" for more information about a command.
 
 #### Example(s)
 
-```
+```sh
 http-perf --url https://sensu.io --warning 1s --critical 2s
 http-perf OK: 0.243321s | dns_duration=0.016596, tls_handshake_duration=0.172235, connect_duration=0.022199, first_byte_duration=0.243267, total_request_duration=0.243321
 
@@ -157,15 +157,15 @@ http-perf OK: 0.243321s | dns_duration=0.016596, tls_handshake_duration=0.172235
 
 #### Note(s)
 
-* http-perf does **not** follow redirects, the page you are testing will need to
+- http-perf does **not** follow redirects, the page you are testing will need to
 be referenced explicitly.
-* Headers should be in the form of "Header-Name: Header value".
+- Headers should be in the form of "Header-Name: Header value".
 
 ### http-json
 
 #### Help output
 
-```
+```none
 HTTP JSON Check
 
 Usage:
@@ -200,7 +200,7 @@ provided by `--expression`.
 
 #### Example(s)
 
-```
+```sh
 # Boolean example - checking Sensu cluster health
 http-json --url http://backend:8080/health --query ".ClusterHealth.[0].Healthy" --expression "== true"
 http-json OK:  The value true found at .ClusterHealth.[0].Healthy matched with expression "== true" and returned true
@@ -230,14 +230,13 @@ http-json OK:  The value 200 found at .status matched with expression "< 300" an
 
 #### Note(s)
 
-* Headers should be in the form of "Header-Name: Header value".
-
+- Headers should be in the form of "Header-Name: Header value".
 
 ### http-get
 
 #### Help output
 
-```
+```none
 HTTP GET Check
 
 Usage:
@@ -264,12 +263,12 @@ Use "http-get [command] --help" for more information about a command.
 #### Using the `http-get` Check
 
 This check is intended to provide a Sensu-native way of fetching the output
-of a HTTP GET request against a metrics endpoint, so that those metrics 
+of a HTTP GET request against a metrics endpoint, so that those metrics
 can be processed by Sensu's `output_metrics_threshold` features.
 
 While this functionality is overlapped by default tools like `wget`, `curl`,
-and Windows's `Invoke-WebRequest` PowerShell commandlet, this provides a 
-cross-platform solution to fetching these HTTP-accessible metrics in a 
+and Windows's `Invoke-WebRequest` PowerShell commandlet, this provides a
+cross-platform solution to fetching these HTTP-accessible metrics in a
 Sensu-native context.
 
 This plugin will result in a critical exit status code if the body is empty
@@ -277,7 +276,7 @@ or if the HTTP GET request fails.
 
 #### Example(s)
 
-```
+```sh
 # Prometheus node_exporter example - fetching Prometheus metrics from node_exporter
 http-get --url http://localhost:9100
 [... output is the metrics in Prometheus format ...]
@@ -285,8 +284,7 @@ http-get --url http://localhost:9100
 
 #### Note(s)
 
-* Headers should be in the form of "Header-Name: Header value".
-
+- Headers should be in the form of "Header-Name: Header value".
 
 ## Configuration
 
@@ -296,7 +294,7 @@ http-get --url http://localhost:9100
 using an asset, please consider doing so! If you're using sensuctl 5.13 with
 Sensu Backend 5.13 or later, you can use the following command to add the asset:
 
-```
+```sh
 sensuctl asset add sensu/http-checks
 ```
 
@@ -357,6 +355,7 @@ spec:
   runtime_assets:
   - sensu/http-checks
 ```
+
 #### http-get
 
 ```yml
@@ -389,7 +388,7 @@ from this source.
 
 From the local path of the http-checks repository:
 
-```
+```sh
 go build -o bin/http-check ./cmd/http-check
 go build -o bin/http-perf ./cmd/http-perf
 go build -o bin/http-json ./cmd/http-json
