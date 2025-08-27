@@ -241,7 +241,7 @@ func executeCheck(event *corev2.Event) (int, error) {
 
 	req := &http.Request{}
 	if plugin.Method == "POST" {
-		rawpost, _ := json.Marshal(plugin.Postdata)
+		rawpost, err := json.Marshal(plugin.Postdata)
 		if err != nil {
 			fmt.Printf("failed to parse Postdata: %s\n", err)
 			return sensu.CheckStateCritical, nil
