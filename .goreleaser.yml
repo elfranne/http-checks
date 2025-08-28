@@ -1,6 +1,6 @@
 project_name: "http-checks"
 builds:
-  # List of builds
+  # http-check
   - main: ./cmd/http-check/main.go
     id: "http-check"
     env:
@@ -31,6 +31,7 @@ builds:
       - windows_386
       - windows_amd64
 
+  # http-perf
   - main: ./cmd/http-perf/main.go
     id: "http-perf"
     env:
@@ -61,6 +62,7 @@ builds:
       - windows_386
       - windows_amd64
 
+  # http-json
   - main: ./cmd/http-json/main.go
     id: "http-json"
     env:
@@ -91,6 +93,7 @@ builds:
       - windows_386
       - windows_amd64
 
+  # http-get
   - main: ./cmd/http-get/main.go
     id: "http-get"
     env:
@@ -121,8 +124,9 @@ builds:
       - windows_386
       - windows_amd64
 
+  # http-size
   - main: ./cmd/http-size/main.go
-    id: "http-get"
+    id: "http-size"
     env:
       - CGO_ENABLED=0
     ldflags: "-s -w -X github.com/sensu/sensu-plugin-sdk/version.version={{.Version}} -X github.com/sensu/sensu-plugin-sdk/version.commit={{.Commit}} -X github.com/sensu/sensu-plugin-sdk/version.date={{.Date}}"
