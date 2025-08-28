@@ -328,7 +328,7 @@ func executeCheck(event *corev2.Event) (int, error) {
 	}
 
 	if value == nil {
-		fmt.Printf("%s CRITICAL: No value was returned for query %q\n", plugin.PluginConfig.Name, plugin.Query)
+		fmt.Printf("%s CRITICAL: No value was returned for query %q\n", plugin.Name, plugin.Query)
 		return sensu.CheckStateCritical, nil
 	}
 
@@ -337,11 +337,11 @@ func executeCheck(event *corev2.Event) (int, error) {
 		return sensu.CheckStateCritical, fmt.Errorf("error evaluating expression: %v", err)
 	}
 	if found {
-		fmt.Printf("%s OK:  The value %v found at %s matched with expression %q and returned true\n", plugin.PluginConfig.Name, value, plugin.Query, plugin.Expression)
+		fmt.Printf("%s OK:  The value %v found at %s matched with expression %q and returned true\n", plugin.Name, value, plugin.Query, plugin.Expression)
 		return sensu.CheckStateOK, nil
 	}
 
-	fmt.Printf("%s CRITICAL: The value %v found at %s did not match with expression %q and returned false\n", plugin.PluginConfig.Name, value, plugin.Query, plugin.Expression)
+	fmt.Printf("%s CRITICAL: The value %v found at %s did not match with expression %q and returned false\n", plugin.Name, value, plugin.Query, plugin.Expression)
 	return sensu.CheckStateCritical, nil
 }
 func evaluateExpression(actualValue interface{}, expression string) (bool, error) {

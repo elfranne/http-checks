@@ -127,7 +127,7 @@ func checkArgs(event *corev2.Event) (int, error) {
 	if len(plugin.TrustedCAFile) > 0 {
 		caCertPool, err := corev2.LoadCACerts(plugin.TrustedCAFile)
 		if err != nil {
-			return sensu.CheckStateWarning, fmt.Errorf("Error loading specified CA file")
+			return sensu.CheckStateWarning, fmt.Errorf("error loading specified CA file")
 		}
 		tlsConfig.RootCAs = caCertPool
 	}
@@ -139,7 +139,7 @@ func checkArgs(event *corev2.Event) (int, error) {
 	if len(plugin.MTLSKeyFile) > 0 && len(plugin.MTLSCertFile) > 0 {
 		cert, err := tls.LoadX509KeyPair(plugin.MTLSCertFile, plugin.MTLSKeyFile)
 		if err != nil {
-			return sensu.CheckStateWarning, fmt.Errorf("Failed to load mTLS key pair %s/%s: %v", plugin.MTLSCertFile, plugin.MTLSKeyFile, err)
+			return sensu.CheckStateWarning, fmt.Errorf("failed to load mTLS key pair %s/%s: %v", plugin.MTLSCertFile, plugin.MTLSKeyFile, err)
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
