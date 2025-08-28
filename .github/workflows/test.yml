@@ -1,4 +1,6 @@
 name: Go Test
+permissions:
+  contents: read
 
 on: [push]
 
@@ -11,9 +13,9 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v5
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version-file: 'go.mod'
       id: go

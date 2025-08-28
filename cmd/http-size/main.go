@@ -216,7 +216,9 @@ func executeCheck(event *corev2.Event) (int, error) {
 		return sensu.CheckStateUnknown, nil
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	var buf bytes.Buffer
 	size, err := buf.ReadFrom(resp.Body)

@@ -211,7 +211,7 @@ func executeCheck(event *corev2.Event) (int, error) {
 
 	req := &http.Request{}
 	if plugin.Method == "POST" {
-		rawpost, _ := json.Marshal(plugin.Postdata)
+		rawpost, err := json.Marshal(plugin.Postdata)
 		if err != nil {
 			fmt.Printf("failed to parse Postdata: %s\n", err)
 			return sensu.CheckStateCritical, nil
@@ -219,13 +219,13 @@ func executeCheck(event *corev2.Event) (int, error) {
 		postdata := bytes.NewBuffer(rawpost)
 		req, err = http.NewRequest(plugin.Method, plugin.URL, postdata)
 		if err != nil {
-			fmt.Printf("%s request creation error: %s\n",plugin.Method, err)
+			fmt.Printf("%s request creation error: %s\n", plugin.Method, err)
 			return sensu.CheckStateCritical, nil
 		}
 	} else {
 		req, err = http.NewRequest(plugin.Method, plugin.URL, nil)
 		if err != nil {
-			fmt.Printf("%s request creation error: %s\n",plugin.Method, err)
+			fmt.Printf("%s request creation error: %s\n", plugin.Method, err)
 			return sensu.CheckStateCritical, nil
 		}
 	}
@@ -249,7 +249,9 @@ func executeCheck(event *corev2.Event) (int, error) {
 		return sensu.CheckStateCritical, nil
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -259,22 +261,22 @@ func executeCheck(event *corev2.Event) (int, error) {
 
 	if len(plugin.SearchString) > 0 {
 		if strings.Contains(string(body), plugin.SearchString) {
-			fmt.Printf("%s OK: found \"%s\" at %s\n", plugin.PluginConfig.Name, plugin.SearchString, resp.Request.URL)
+			fmt.Printf("%s OK: found \"%s\" at %s\n", plugin.Name, plugin.SearchString, resp.Request.URL)
 			return sensu.CheckStateOK, nil
 		}
-		fmt.Printf("%s CRITICAL: \"%s\" not found at %s\n", plugin.PluginConfig.Name, plugin.SearchString, resp.Request.URL)
+		fmt.Printf("%s CRITICAL: \"%s\" not found at %s\n", plugin.Name, plugin.SearchString, resp.Request.URL)
 		return sensu.CheckStateCritical, nil
 	}
 
 	switch {
 	case resp.StatusCode >= http.StatusBadRequest:
-		fmt.Printf("%s CRITICAL: HTTP Status %v for %s\n", plugin.PluginConfig.Name, resp.StatusCode, plugin.URL)
+		fmt.Printf("%s CRITICAL: HTTP Status %v for %s\n", plugin.Name, resp.StatusCode, plugin.URL)
 		return sensu.CheckStateCritical, nil
 	// resp.StatusCode will ultimately be 200 for successful redirects
 	// so instead we check to see if the current URL matches the requested
 	// URL
 	case resp.Request.URL.String() != plugin.URL && plugin.RedirectOK:
-		fmt.Printf("%s OK: HTTP Status %v for %s (redirect from %s)\n", plugin.PluginConfig.Name, resp.StatusCode, resp.Request.URL, plugin.URL)
+		fmt.Printf("%s OK: HTTP Status %v for %s (redirect from %s)\n", plugin.Name, resp.StatusCode, resp.Request.URL, plugin.URL)
 		return sensu.CheckStateOK, nil
 	// But, if we've disabled redirects, this should work
 	case resp.StatusCode >= http.StatusMultipleChoices:
@@ -283,13 +285,13 @@ func executeCheck(event *corev2.Event) (int, error) {
 		if len(redirectURL) > 0 {
 			extra = fmt.Sprintf(" (redirects to %s)", redirectURL)
 		}
-		fmt.Printf("%s WARNING: HTTP Status %v for %s %s\n", plugin.PluginConfig.Name, resp.StatusCode, plugin.URL, extra)
+		fmt.Printf("%s WARNING: HTTP Status %v for %s %s\n", plugin.Name, resp.StatusCode, plugin.URL, extra)
 		return sensu.CheckStateWarning, nil
 	case resp.StatusCode == -1:
-		fmt.Printf("%s UNKNOWN: HTTP Status %v for %s\n", plugin.PluginConfig.Name, resp.StatusCode, plugin.URL)
+		fmt.Printf("%s UNKNOWN: HTTP Status %v for %s\n", plugin.Name, resp.StatusCode, plugin.URL)
 		return sensu.CheckStateUnknown, nil
 	default:
-		fmt.Printf("%s OK: HTTP Status %v for %s\n", plugin.PluginConfig.Name, resp.StatusCode, plugin.URL)
+		fmt.Printf("%s OK: HTTP Status %v for %s\n", plugin.Name, resp.StatusCode, plugin.URL)
 		return sensu.CheckStateOK, nil
 	}
 }
