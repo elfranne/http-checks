@@ -316,7 +316,9 @@ func executeCheck(event *corev2.Event) (int, error) {
 	}
 	totalRequestDuration = time.Since(start)
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	// make a map to translate into Libcurl names
 	perfnames := map[bool]map[string]string{

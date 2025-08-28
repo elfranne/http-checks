@@ -274,7 +274,9 @@ func executeCheck(event *corev2.Event) (int, error) {
 		fmt.Printf("\nDEBUG-RESPONSE:\n%s", string(dumpResp))
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -219,13 +219,13 @@ func executeCheck(event *corev2.Event) (int, error) {
 		postdata := bytes.NewBuffer(rawpost)
 		req, err = http.NewRequest(plugin.Method, plugin.URL, postdata)
 		if err != nil {
-			fmt.Printf("%s request creation error: %s\n",plugin.Method, err)
+			fmt.Printf("%s request creation error: %s\n", plugin.Method, err)
 			return sensu.CheckStateCritical, nil
 		}
 	} else {
 		req, err = http.NewRequest(plugin.Method, plugin.URL, nil)
 		if err != nil {
-			fmt.Printf("%s request creation error: %s\n",plugin.Method, err)
+			fmt.Printf("%s request creation error: %s\n", plugin.Method, err)
 			return sensu.CheckStateCritical, nil
 		}
 	}
@@ -249,7 +249,9 @@ func executeCheck(event *corev2.Event) (int, error) {
 		return sensu.CheckStateCritical, nil
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
