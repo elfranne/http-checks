@@ -142,7 +142,7 @@ var (
 			Argument:  "above",
 			Shorthand: "a",
 			Default:   false,
-			Usage:     "Skip TLS certificate verification (not recommended!)",
+			Usage:     "Comparaison type",
 			Value:     &plugin.Above,
 		},
 		&sensu.PluginConfigOption[bool]{
@@ -151,7 +151,7 @@ var (
 			Argument:  "below",
 			Shorthand: "b",
 			Default:   true,
-			Usage:     "Skip TLS certificate verification (not recommended!)",
+			Usage:     "Comparaison type",
 			Value:     &plugin.Below,
 		},
 		&sensu.PluginConfigOption[bool]{
@@ -160,7 +160,7 @@ var (
 			Argument:  "equal",
 			Shorthand: "e",
 			Default:   false,
-			Usage:     "Skip TLS certificate verification (not recommended!)",
+			Usage:     "Comparaison type",
 			Value:     &plugin.Equal,
 		},
 	}
