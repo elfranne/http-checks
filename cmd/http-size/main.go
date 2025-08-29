@@ -28,8 +28,11 @@ type Config struct {
 	MTLSKeyFile        string
 	MTLSCertFile       string
 	Schema             string
-	Warn               int64
-	Crit               int64
+	Warning            int64
+	Critical           int64
+	Above              bool
+	Below              bool
+	Equal              bool
 }
 
 var (
@@ -116,22 +119,49 @@ var (
 			Value:     &plugin.Schema,
 		},
 		&sensu.PluginConfigOption[int64]{
-			Path:      "warn",
+			Path:      "warning",
 			Env:       "",
-			Argument:  "warn",
+			Argument:  "warning",
 			Shorthand: "w",
 			Default:   0,
 			Usage:     "Warning",
-			Value:     &plugin.Warn,
+			Value:     &plugin.Warning,
 		},
 		&sensu.PluginConfigOption[int64]{
-			Path:      "crit",
+			Path:      "critical",
 			Env:       "",
-			Argument:  "crit",
+			Argument:  "critical",
 			Shorthand: "c",
 			Default:   0,
 			Usage:     "Critical value",
-			Value:     &plugin.Crit,
+			Value:     &plugin.Critical,
+		},
+		&sensu.PluginConfigOption[bool]{
+			Path:      "above",
+			Env:       "",
+			Argument:  "above",
+			Shorthand: "a",
+			Default:   false,
+			Usage:     "Skip TLS certificate verification (not recommended!)",
+			Value:     &plugin.Above,
+		},
+		&sensu.PluginConfigOption[bool]{
+			Path:      "below",
+			Env:       "",
+			Argument:  "below",
+			Shorthand: "b",
+			Default:   true,
+			Usage:     "Skip TLS certificate verification (not recommended!)",
+			Value:     &plugin.Below,
+		},
+		&sensu.PluginConfigOption[bool]{
+			Path:      "equal",
+			Env:       "",
+			Argument:  "equal",
+			Shorthand: "e",
+			Default:   false,
+			Usage:     "Skip TLS certificate verification (not recommended!)",
+			Value:     &plugin.Equal,
 		},
 	}
 )
@@ -227,12 +257,12 @@ func executeCheck(event *corev2.Event) (int, error) {
 		return sensu.CheckStateUnknown, nil
 	}
 
-	if size == plugin.Crit {
+	if (plugin.Above == true && size > plugin.Critical) || (plugin.Below && size < plugin.Critical) || (plugin.Equal && size == plugin.Critical) {
 		fmt.Printf("http-size CRITICAL: %s Body: %d Bytes| %ssize=%d\n", plugin.URL, size, plugin.Schema, size)
 		return sensu.CheckStateCritical, nil
 	}
 
-	if size == plugin.Warn {
+	if (plugin.Above && size > plugin.Warning) || (plugin.Below && size < plugin.Warning) || (plugin.Equal && size == plugin.Warning) {
 		fmt.Printf("http-size WARNING: %s Body: %d Bytes | %ssize=%d\n", plugin.URL, size, plugin.Schema, size)
 		return sensu.CheckStateWarning, nil
 	}
