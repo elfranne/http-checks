@@ -257,7 +257,7 @@ func executeCheck(event *corev2.Event) (int, error) {
 		return sensu.CheckStateUnknown, nil
 	}
 
-	if (plugin.Above == true && size > plugin.Critical) || (plugin.Below && size < plugin.Critical) || (plugin.Equal && size == plugin.Critical) {
+	if (plugin.Above && size > plugin.Critical) || (plugin.Below && size < plugin.Critical) || (plugin.Equal && size == plugin.Critical) {
 		fmt.Printf("http-size CRITICAL: %s Body: %d Bytes| %ssize=%d\n", plugin.URL, size, plugin.Schema, size)
 		return sensu.CheckStateCritical, nil
 	}
