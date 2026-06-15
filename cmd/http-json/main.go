@@ -285,7 +285,7 @@ func executeCheck(event *corev2.Event) (int, error) {
 	}
 
 	// will responds [] as empty response
-	if int(resp.ContentLength) <= 2 {
+	if len(body) <= 2 {
 		fmt.Printf("empty response: %s\n", err)
 		return sensu.CheckStateCritical, nil
 	}
